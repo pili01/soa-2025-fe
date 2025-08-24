@@ -1,0 +1,183 @@
+import { Layer, Map, MapLayerMouseEvent, MapRef, Marker, Source } from "@vis.gl/react-maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import pinIcon from "../assets/map-point.png";
+import { useDrivingRoute } from "../hooks/useDrivingRoute";
+import type { Keypoint } from "../models/Tour";
+
+export type TourMapProps = {
+  mode: "view" | "edit";
+  checkPoints: Keypoint[];
+  selectedId?: string | number;
+  draftLocation?: { latitude: number; longitude: number };
+  onAddKeyPoint?: (pos: { latitude: number; longitude: number }) => void;
+  onPickCoords?: (pos: { latitude: number; longitude: number }) => void;
+};
+
+const MAPTILER_STYLE =
+  "https://api.maptiler.com/maps/streets-v2/style.json?key=eQ7kHusRBi4TZNe7vYuj";
+
+export default function TourMap({
+  mode,
+  checkPoints = [],
+  selectedId,
+  draftLocation,
+  onAddKeyPoint,
+  onPickCoords,
+}: TourMapProps) {
+  const mapRef = useRef<MapRef | null>(null);
+  const [pickMode, setPickMode] = useState(false);
+
+  const initialView = useMemo(
+    () => ({
+      longitude: 19.8335,
+      latitude: 45.2671,
+      zoom: 12,
+      bearing: 0,
+      pitch: 0,
+    }),
+    []
+  );
+
+  const points = useMemo(
+    () =>
+      checkPoints.map((k) => ({
+        latitude: k.latitude,
+        longitude: k.longitude,
+        ordinal: k.ordinal,
+      })),
+    [checkPoints]
+  );
+
+  const { segments, bounds } = useDrivingRoute(points);
+
+  const segmentsFC = useMemo(
+    () =>
+      ({
+        type: "FeatureCollection",
+        features: segments ?? [],
+      }) as GeoJSON.FeatureCollection,
+    [segments]
+  );
+
+  useEffect(() => {
+    if (bounds && mapRef.current) {
+      mapRef.current.fitBounds(bounds, { padding: 24, maxZoom: 16 });
+    }
+  }, [bounds]);
+
+  const handleMapClick = useCallback(
+    (e: MapLayerMouseEvent) => {
+      const { lng, lat } = e.lngLat;
+
+      if (pickMode) {
+        const pos = { latitude: +lat, longitude: +lng };
+
+        console.log(
+          "coords:",
+          pos,
+        );
+
+        if (onPickCoords) onPickCoords(pos);
+        else onAddKeyPoint?.(pos);
+        setPickMode(false);
+        return;
+      }
+
+      if (mode !== "edit") return;
+      onAddKeyPoint?.({ latitude: +lat, longitude: +lng });
+    },
+    [pickMode, mode, onAddKeyPoint, onPickCoords]
+  );
+
+  return (
+    <div style={{ width: "100%", height: "85vh", position: "relative" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 2,
+          display: "flex",
+          gap: 8,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setPickMode((v) => !v)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #e0e0e0",
+            background: pickMode ? "#1976d2" : "#fff",
+            color: pickMode ? "#fff" : "#333",
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: "0 1px 6px rgba(0,0,0,0.12)",
+          }}
+          title={pickMode ? "Klikni na mapu da izabereš koordinate" : "Uključi biranje koordinata"}
+        >
+          {pickMode ? "Klikni na mapu…" : "Where are you?"}
+        </button>
+      </div>
+
+      <Map
+        ref={mapRef}
+        id="tour-map"
+        initialViewState={initialView}
+        mapStyle={MAPTILER_STYLE}
+        onClick={handleMapClick}
+        dragRotate={false}
+        style={{
+          width: "100%",
+          height: "100%",
+          cursor: pickMode ? "crosshair" : undefined,
+        }}
+      >
+        {checkPoints.map((k, index) => {
+          const isSelected = String(k.id) === String(selectedId ?? "");
+          return (
+            <Marker
+              key={`checkpoint-${k.id ?? index}`}
+              longitude={Number(k.longitude)}
+              latitude={Number(k.latitude)}
+              anchor="bottom"
+              offset={[0, 0]}
+            >
+              <img
+                src={pinIcon}
+                alt={k.name}
+                width={isSelected ? 34 : 28}
+                height={isSelected ? 34 : 28}
+                draggable={false}
+                onClick={(e) => e.stopPropagation()}
+                style={{ display: "block", userSelect: "none", cursor: "pointer" }}
+              />
+            </Marker>
+          );
+        })}
+
+        {draftLocation && (
+          <Marker
+            key={`draft-${draftLocation.latitude}-${draftLocation.longitude}`}
+            longitude={draftLocation?.longitude ?? 0}
+            latitude={draftLocation?.latitude ?? 0}
+          />
+        )}
+
+        <Source id="route-segments" type="geojson" data={segmentsFC}>
+          <Layer
+            id="route-line"
+            type="line"
+            layout={{ "line-join": "round", "line-cap": "round" }}
+            paint={{
+              "line-width": 5,
+              "line-color": "#1976d2",
+              "line-opacity": 0.8,
+            }}
+          />
+        </Source>
+      </Map>
+    </div>
+  );
+}
