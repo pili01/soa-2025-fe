@@ -15,19 +15,19 @@ export default function Header() {
           <div className="collapse navbar-collapse" id="mainNav">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
-                <NavLink to="/" end className={({isActive}) => `nav-link${isActive ? " active" : ""}`}>Home</NavLink>
+                <NavLink to="/" end className="nav-link">Home</NavLink>
               </li>
               <li className="nav-item">
-                <NavLink to="/blog" className={({isActive}) => `nav-link${isActive ? " active" : ""}`}>Blogs</NavLink>
+                <NavLink to="/blog" className="nav-link">Blogs</NavLink>
               </li>
               <li className="nav-item">
-                <NavLink to="/tours" className={({isActive}) => `nav-link${isActive ? " active" : ""}`}>Tours</NavLink>
+                <NavLink to="/tours" className="nav-link">Tours</NavLink>
               </li>
               <li className="nav-item">
-                <NavLink to="/create-tour" className={({isActive}) => `nav-link${isActive ? " active" : ""}`}>Create tour</NavLink>
+                <NavLink to="/create-tour" className="nav-link">Create tour</NavLink>
               </li>
               <li className="nav-item">
-                <NavLink to="/my-tours" className={({isActive}) => `nav-link${isActive ? " active" : ""}`}>My tours</NavLink>
+                <NavLink to="/my-tours" className="nav-link">My tours</NavLink>
               </li>
             </ul>
           </div>
