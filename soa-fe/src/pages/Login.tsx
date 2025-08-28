@@ -20,9 +20,12 @@ export default function Login() {
       const response = await AuthService.login(credentials);
       AuthService.setToken(response.token);
       
-      // Check if user is admin and redirect accordingly
-      if (AuthService.isAdmin()) {
+      // Check user role and redirect accordingly
+      const userRole = AuthService.getUserRole();
+      if (userRole === 'Admin') {
         window.location.href = '/admin';
+      } else if (userRole === 'Guide') {
+        window.location.href = '/create-tour';
       } else {
         window.location.href = '/';
       }

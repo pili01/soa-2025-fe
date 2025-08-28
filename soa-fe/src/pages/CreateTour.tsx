@@ -1,254 +1,570 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Keypoint } from '../models/Tour';
-import { createTourKeyPoint, deleteTourKeyPoint, getTourKeyPoints, updateTourKeyPoints } from '../services/CreateTourService';
-import KeypointsStep from './KeyPointStep';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Map, MapRef, MapLayerMouseEvent, Marker } from '@vis.gl/react-maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { Plus, X, MapPin, Trash2 } from 'lucide-react';
+import { AuthService } from '../services/AuthService';
 
-export default function TourWizard() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [keyPoints, setKeyPoints] = useState<Keypoint[]>([]);
-  const [mode, setMode] = useState("Add");
-  const [deleteKp, setDeleteKp] = useState<number | null>(null);
-  const createGuardRef = useRef<string | null>(null);
-  const [currentKeyPoint, setCurrentKeyPoint] = useState<Keypoint>({
-        id: 0,
-        tourId: 11,
-        name: "",
-        description: "",
-        imageUrl: "",
-        latitude: 0,
-        longitude: 0,
-        ordinal: 1,
-   });
+interface TourData {
+  name: string;
+  description: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  tags: string[];
+}
 
+interface Keypoint {
+  name: string;
+  description: string;
+  imageUrl: string;
+  latitude: number;
+  longitude: number;
+  ordinal: number;
+}
 
-  const nextStep = () => {
-    if (currentStep < 2) setCurrentStep(currentStep + 1);
-  };
+export default function CreateTour() {
+  const navigate = useNavigate();
+  const [mapInstance, setMapInstance] = useState<any>(null);
 
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
-
-  const tourId = 11;
-
-  const didFetchRef = useRef(false);
-
+  // Check if user is authenticated and is a Guide
   useEffect(() => {
-    if (didFetchRef.current) return;
-    didFetchRef.current = true;
-
-    const ac = new AbortController();
-
-    (async () => {
-      try {
-        const list = await getTourKeyPoints(tourId );
-        setKeyPoints(list);
-        setMode("add");
-      } catch (err) {
-        if ((err as any)?.code === "ERR_CANCELED" || (err as any)?.name === "CanceledError") return;
-        console.error("GET keypoints failed:", err);
-      }
-    })();
-
-    return () => ac.abort();
-  }, [tourId]);
-
-  useEffect(() => {
-    if (deleteKp !== null) {
-      const doDelete = async () => {
-        try {
-          if(deleteKp )
-          await deleteTourKeyPoint(deleteKp);
-          const list = await getTourKeyPoints(tourId);
-          setKeyPoints(list);
-        } catch (err) {
-          console.error("Greška pri brisanju keypoint-a:", err);
-        }
-      };
-
-      doDelete();
+    if (!AuthService.isAuthenticated()) {
+      navigate('/login');
+      return;
     }
-  }, [deleteKp]);
 
+    const userRole = AuthService.getUserRole();
+    if (userRole !== 'Guide') {
+      setError('Samo vodiči mogu da kreiraju ture');
+      setIsCheckingAuth(false);
+      return;
+    }
 
+    // Check if user is blocked (this would require additional API call)
+    // For now, we'll assume the backend will handle this
+    
+    setIsCheckingAuth(false);
+  }, [navigate]);
+  
+  const [tourData, setTourData] = useState<TourData>({
+    name: '',
+    description: '',
+    difficulty: 'Easy',
+    tags: []
+  });
+  
+  const [keypoints, setKeypoints] = useState<Keypoint[]>([]);
+  
+  const [tagInput, setTagInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const mapRef = useRef<MapRef | null>(null);
+
+  const initialView = {
+    longitude: 20.4489, // Belgrade
+    latitude: 44.7866,
+    zoom: 10,
+    bearing: 0,
+    pitch: 0,
+  };
+
+  // Automatically update ordinals when keypoints change
   useEffect(() => {
-    if (!currentKeyPoint) return;
+    setKeypoints(prev => 
+      prev.map((keypoint, index) => ({
+        ...keypoint,
+        ordinal: index + 1
+      }))
+    );
+  }, [keypoints.length]);
 
-    const saveKeyPoint = async () => {
-      try {
-        if (mode === "edit") {
-          await updateTourKeyPoints(currentKeyPoint, currentKeyPoint.id);
-
-          const list = await getTourKeyPoints(tourId); 
-          setKeyPoints(list);  
-        }
-      } catch (error) {
-        console.error("Greška prilikom čuvanja keypointa:", error);
-      }
+  const handleMapClick = (e: MapLayerMouseEvent) => {
+    const { lng, lat } = e.lngLat;
+    const newKeypoint: Keypoint = {
+      name: '',
+      description: '',
+      imageUrl: '',
+      latitude: lat,
+      longitude: lng,
+      ordinal: 0 // Will be automatically set by useEffect
     };
+    setKeypoints(prev => [...prev, newKeypoint]);
+  };
 
-    saveKeyPoint();
-  }, [mode, currentKeyPoint]); 
+  const updateKeypoint = (index: number, field: keyof Keypoint, value: any) => {
+    const updatedKeypoints = [...keypoints];
+    updatedKeypoints[index] = { ...updatedKeypoints[index], [field]: value };
+    setKeypoints(updatedKeypoints);
+  };
 
-  const handleSetKeyPoints = (updater: React.SetStateAction<Keypoint[]>) => {
-    const EPS = 1e-6;
+  const removeKeypoint = (index: number) => {
+    setKeypoints(prev => prev.filter((_, i) => i !== index));
+  };
 
-    setKeyPoints(prev => {
-      const next =
-        typeof updater === "function"
-          ? (updater as (p: Keypoint[]) => Keypoint[])(prev)
-          : updater;
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, keypointIndex: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      const addedExactlyOne = next.length === prev.length + 1;
-      const last = next.at(-1);
-      if (!addedExactlyOne || !last) return prev;
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Molimo izaberite sliku');
+      return;
+    }
 
-      const exists = prev.some(p =>
-        Math.abs(Number(p.latitude) - Number(last.latitude)) < EPS &&
-        Math.abs(Number(p.longitude) - Number(last.longitude)) < EPS
-      );
-      if (exists) return prev;
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Slika ne sme biti veća od 5MB');
+      return;
+    }
 
-      if (!Number.isFinite(last.latitude) || !Number.isFinite(last.longitude)) return prev;
+    setIsLoading(true);
+    setError('');
 
-      const { id: _id, ...payload } = last as Keypoint & { id?: number };
-      const guardKey = `${payload.tourId}:${Number(payload.latitude).toFixed(6)},${Number(payload.longitude).toFixed(6)}`;
-      if (createGuardRef.current === guardKey) return prev;
-      createGuardRef.current = guardKey;
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('keypointId', keypointIndex.toString());
+      formData.append('tourId', '0'); // Temporary, will be updated after tour creation
 
-      void createTourKeyPoint(tourId, payload as Omit<Keypoint, "id">)
-        .then(() => getTourKeyPoints(tourId).then(setKeyPoints))
-        .catch(err => console.error(err))
-        .finally(() => { createGuardRef.current = null; });
+      const response = await fetch('http://localhost:8080/api/keypoint-image/saveKeypointPhoto', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AuthService.getToken()}`
+        },
+        body: formData
+      });
 
-      return next;
+      if (response.ok) {
+        const result = await response.json();
+        updateKeypoint(keypointIndex, 'imageUrl', result.photoURL);
+        setSuccess('Slika uspešno upload-ovana!');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Greška pri upload-u slike');
+      }
+    } catch (error) {
+      setError('Greška pri upload-u slike');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !tourData.tags.includes(tagInput.trim())) {
+      setTourData({
+        ...tourData,
+        tags: [...tourData.tags, tagInput.trim()]
+      });
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTourData({
+      ...tourData,
+      tags: tourData.tags.filter(tag => tag !== tagToRemove)
     });
   };
 
+  const isValid = (): boolean => {
+    return tourData.name.trim() !== '' &&
+           tourData.description.trim() !== '' &&
+           tourData.difficulty &&
+           keypoints.length >= 2 &&
+           keypoints.every(kp => kp.name.trim() !== '' && kp.description.trim() !== '');
+  };
+
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isValid()) {
+      setError('Popuni sva obavezna polja i dodaj minimalno 2 keypoint-a');
+      return;
+    }
+
+    // Double check user role before submitting
+    const userRole = AuthService.getUserRole();
+    if (userRole !== 'Guide') {
+      setError('Samo vodiči mogu da kreiraju ture');
+      return;
+    }
+
+    // Check if user is blocked (this would require additional API call)
+    // For now, we'll assume the backend will handle this
+
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('http://localhost:8080/api/tours/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AuthService.getToken()}`
+        },
+        body: JSON.stringify({
+          tour: tourData,
+          keypoints: keypoints
+        })
+      });
+
+      if (response.ok) {
+        setSuccess('Tura uspešno kreirana!');
+        setTimeout(() => {
+          navigate('/my-tours');
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Greška pri kreiranju ture');
+        }
+      } catch (error) {
+      setError('Greška pri kreiranju ture');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="container mt-5">
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Proveravam autentifikaciju...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !isCheckingAuth) {
+    return (
+      <div className="container mt-5">
+        <div className="alert alert-danger" role="alert">
+          <h4 className="alert-heading">Greška!</h4>
+          <p>{error}</p>
+          <button
+            className="btn btn-outline-danger"
+            onClick={() => navigate('/')}
+          >
+            Nazad na početnu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-green-800 mb-2">Kreiranje turističke ture</h1>
-          <p className="text-green-600">Napravite nezaboravno iskustvo za vaše goste</p>
+    <div className="container mt-4">
+      <div className="row">
+        <div className="col-lg-8">
+          <div className="card shadow">
+            <div className="card-header">
+              <h2 className="mb-0">Kreiraj novu turu</h2>
+            </div>
+            <div className="card-body">
+              {error && (
+                <div className="alert alert-danger" role="alert">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="alert alert-success" role="alert">
+                  {success}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                {/* Tour Basic Info */}
+                <div className="form-section">
+                  <h5>Osnovne informacije</h5>
+                  
+                  <div className="mb-3">
+                    <label htmlFor="name" className="form-label">Naziv ture *</label>
+                    <input
+                      type="text"
+                      className="form-control form-control-lg"
+                      id="name"
+                      value={tourData.name}
+                      onChange={(e) => setTourData({...tourData, name: e.target.value})}
+                      placeholder="Unesi naziv ture"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="description" className="form-label">Opis ture *</label>
+                    <textarea
+                      className="form-control form-control-lg"
+                      id="description"
+                      rows={4}
+                      value={tourData.description}
+                      onChange={(e) => setTourData({...tourData, description: e.target.value})}
+                      placeholder="Opis ture..."
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="difficulty" className="form-label">Težina *</label>
+                    <select
+                      className="form-select form-select-lg"
+                      id="difficulty"
+                      value={tourData.difficulty}
+                      onChange={(e) => setTourData({...tourData, difficulty: e.target.value as 'Easy' | 'Medium' | 'Hard'})}
+                      required
+                    >
+                      <option value="Easy">Lako</option>
+                      <option value="Medium">Srednje</option>
+                      <option value="Hard">Teško</option>
+                    </select>
         </div>
 
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
-              currentStep >= 1 ? 'bg-green-800 text-white' : 'bg-gray-300 text-gray-600'
-            }`}>
-              1
+                  <div className="mb-3">
+                    <label className="form-label">Tagovi</label>
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      {tourData.tags.map(tag => (
+                        <span key={tag} className="badge bg-primary d-flex align-items-center tag-badge">
+                          {tag}
+                          <button
+                            type="button"
+                            className="btn-close btn-close-white ms-2"
+                            onClick={() => removeTag(tag)}
+                          />
+                        </span>
+                      ))}
             </div>
-            <div className={`w-16 h-1 ${currentStep >= 2 ? 'bg-green-800' : 'bg-gray-300'}`}></div>
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
-              currentStep >= 2 ? 'bg-green-800 text-white' : 'bg-gray-300 text-gray-600'
-            }`}>
-              2
+                    <div className="input-group tag-input-group">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Dodaj tag..."
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={addTag}
+                      >
+                        <Plus size={16} />
+                      </button>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-center space-x-8 mb-8">
-          <span className={`font-medium ${currentStep === 1 ? 'text-green-800' : 'text-gray-500'}`}>
-            Osnovne informacije
-          </span>
-          <span className={`font-medium ${currentStep === 2 ? 'text-green-800' : 'text-gray-500'}`}>
-            Keypoint-ovi
-          </span>
+                {/* Keypoints Section */}
+                <div className="form-section">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Keypoint-ovi *</h5>
+                    <small className="text-muted">Minimalno 2 keypoint-a</small>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {currentStep === 1 && (
-            <div>
-              <h2 className="text-2xl font-bold text-green-800 mb-6">Osnovne informacije o turi</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Naziv ture</label>
+                  {keypoints.length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-muted mb-3">Nema keypoint-ova. Klikni na mapu da dodaš prvi keypoint!</p>
+                    </div>
+                  )}
+
+                  {keypoints.map((keypoint, index) => (
+                    <div key={index} className="card mb-3 border-primary keypoint-card">
+                      <div className="card-header d-flex justify-content-between align-items-center">
+                        <h6 className="mb-0">
+                          <MapPin size={16} className="me-2" />
+                          Keypoint {index + 1}
+                        </h6>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => removeKeypoint(index)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className="card-body">
+                        <div className="row">
+                          <div className="col-md-6">
+                            <div className="mb-3">
+                              <label className="form-label">Naziv lokacije *</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-3 border-2 border-yellow-200 rounded-lg focus:border-orange-400 focus:outline-none transition-colors"
-                    placeholder="Unesite naziv ture..."
+                                className="form-control"
+                                value={keypoint.name}
+                                onChange={(e) => updateKeypoint(index, 'name', e.target.value)}
+                                placeholder="Naziv lokacije"
+                                required
+                              />
+                            </div>
+                          </div>
+                                                                <div className="col-md-6">
+                                        <div className="mb-3">
+                                          <label className="form-label">Slika lokacije</label>
+                                          <div className="d-flex align-items-center gap-2">
+                                            <input
+                                              type="file"
+                                              className="form-control"
+                                              accept="image/*"
+                                              onChange={(e) => handleImageUpload(e, index)}
+                                            />
+                                            {keypoint.imageUrl && (
+                                              <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger"
+                                                onClick={() => updateKeypoint(index, 'imageUrl', '')}
+                                              >
+                                                <X size={14} />
+                                              </button>
+                                            )}
+                                          </div>
+                                          {keypoint.imageUrl && (
+                                            <div className="mt-2">
+                                              <img 
+                                                src={keypoint.imageUrl} 
+                                                alt="Preview" 
+                                                className="img-thumbnail"
+                                                style={{ maxWidth: '100px', maxHeight: '100px' }}
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <label className="form-label">Opis lokacije *</label>
+                          <textarea
+                            className="form-control"
+                            rows={2}
+                            value={keypoint.description}
+                            onChange={(e) => updateKeypoint(index, 'description', e.target.value)}
+                            placeholder="Opis lokacije..."
+                            required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Trajanje</label>
+
+                        <div className="row">
+                          <div className="col-md-6">
+                            <div className="mb-3">
+                              <label className="form-label">Geografska širina</label>
                   <input
-                    type="text"
-                    className="w-full px-4 py-3 border-2 border-yellow-200 rounded-lg focus:border-orange-400 focus:outline-none transition-colors"
-                    placeholder="npr. 3 sata"
+                                type="number"
+                                className="form-control"
+                                value={keypoint.latitude}
+                                onChange={(e) => updateKeypoint(index, 'latitude', parseFloat(e.target.value))}
+                                step="0.0001"
+                                readOnly
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Težina</label>
-                  <select
-                    className="w-full px-4 py-3 border-2 border-yellow-200 rounded-lg focus:border-orange-400 focus:outline-none transition-colors"
-                  >
-                    <option value="">Izaberite težinu...</option>
-                    <option value="Lako">Lako</option>
-                    <option value="Srednje">Srednje</option>
-                    <option value="Teško">Teško</option>
-                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cena</label>
+                          <div className="col-md-6">
+                            <div className="mb-3">
+                              <label className="form-label">Geografska dužina</label>
                   <input
-                    type="text"
-                    className="w-full px-4 py-3 border-2 border-yellow-200 rounded-lg focus:border-orange-400 focus:outline-none transition-colors"
-                    placeholder="npr. 2000 RSD"
+                                type="number"
+                                className="form-control"
+                                value={keypoint.longitude}
+                                onChange={(e) => updateKeypoint(index, 'longitude', parseFloat(e.target.value))}
+                                step="0.0001"
+                                readOnly
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Opis ture</label>
-                  <textarea
-                    rows={4}
-                    className="w-full px-4 py-3 border-2 border-yellow-200 rounded-lg focus:border-orange-400 focus:outline-none transition-colors resize-none"
-                    placeholder="Opišite vašu turu..."
-                  ></textarea>
+                          </div>
                 </div>
               </div>
             </div>
-          )}
+                  ))}
 
-          {currentStep === 2 && (
-            <KeypointsStep
-                currentKeyPoint={currentKeyPoint}
-                setCurrentKeyPoint={setCurrentKeyPoint}
-                keyPoints={keyPoints}
-                mode = {mode}
-                setMode = {setMode}
-                setDeleteKp = {setDeleteKp}
-                setKeyPoints={handleSetKeyPoints}
-            />
-          )}
-
-          <div className="flex justify-between mt-8">
+                  <div className="text-center">
             <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="flex items-center space-x-2 px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span>Nazad</span>
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={() => {
+                        const newKeypoint: Keypoint = {
+                          name: '',
+                          description: '',
+                          imageUrl: '',
+                          latitude: 0,
+                          longitude: 0,
+                          ordinal: 0 // Will be automatically set by useEffect
+                        };
+                        setKeypoints(prev => [...prev, newKeypoint]);
+                      }}
+                    >
+                      <Plus size={16} className="me-2" />
+                      Dodaj keypoint
             </button>
+                  </div>
+                </div>
 
-            {currentStep === 1 ? (
+                <div className="d-grid">
               <button
-                onClick={nextStep}
-                className="flex items-center space-x-2 px-6 py-3 bg-green-800 text-white rounded-lg font-semibold hover:bg-green-900 transition-colors"
+                    type="submit"
+                    className="btn btn-primary btn-lg"
+                    disabled={isLoading || !isValid()}
               >
-                <span>Sledeći korak</span>
-                <ChevronRight className="h-5 w-5" />
+                    {isLoading ? 'Kreiram turu...' : 'Kreiraj turu'}
               </button>
-            ) : (
-              <button className="px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors">
-                Kreiraj turu
-              </button>
-            )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Map Sidebar */}
+        <div className="col-lg-4">
+          <div className="card shadow">
+            <div className="card-header">
+              <h5 className="mb-0">Mapa</h5>
+              <small className="text-muted">Klikni na mapu da dodaš keypoint</small>
+            </div>
+            <div className="card-body p-0">
+              <Map
+                ref={mapRef}
+                id="create-tour-map"
+                initialViewState={initialView}
+                mapStyle="https://api.maptiler.com/maps/streets-v2/style.json?key=eQ7kHusRBi4TZNe7vYuj"
+                onClick={handleMapClick}
+                style={{ height: '500px', width: '100%' }}
+              >
+                {keypoints.map((keypoint, index) => (
+                  <Marker
+                    key={`keypoint-${index}`}
+                    longitude={keypoint.longitude}
+                    latitude={keypoint.latitude}
+                    anchor="bottom"
+                  >
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: '#0d6efd',
+                        border: '2px solid white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+                  </Marker>
+                ))}
+              </Map>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}

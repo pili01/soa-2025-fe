@@ -1,27 +1,48 @@
 import axios from "axios";
 import { Keypoint, Tour } from "../models/Tour";
+import { AuthService } from "./AuthService";
 
-const token = localStorage.getItem("jwt");
-
-interface ApiTourResponse {
-  tours: Tour[];
-}
+// Backend returns array directly, not wrapped in object
+type ApiTourResponse = Tour[];
 
 
 export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
-    const token = localStorage.getItem("jwt");
+    const token = AuthService.getToken();
 
-    const res = await axios.get<ApiTourResponse>(
-      "http://localhost:8080/api/tours/my-tours",
-      {
-        signal,
-        headers: token
-          ? { Authorization: `Bearer ${token}` }
-          : {},
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    try {
+      console.log('Calling getTours with token:', token.substring(0, 20) + '...');
+      
+      const res = await axios.get<ApiTourResponse>(
+        "http://localhost:8080/api/tours/my-tours",
+        {
+          signal,
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      console.log('getTours response:', res);
+      console.log('getTours response.data:', res.data);
+      console.log('getTours response.data (tours array):', res.data);
+
+      if (!Array.isArray(res.data)) {
+        console.error('Response is not an array:', res.data);
+        throw new Error('Invalid response format: expected array of tours');
       }
-    );
 
-    return res.data.tours;
+      return res.data;
+    } catch (error) {
+      console.error('getTours error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error response:', error.response);
+        console.error('Axios error status:', error.response?.status);
+        console.error('Axios error data:', error.response?.data);
+      }
+      throw error;
+    }
 }
 
   export async function createTourKeyPoint(
@@ -29,13 +50,17 @@ export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
     keypoint: Omit<Keypoint, "id">,
     signal?: AbortSignal
   ) {
-    const token = localStorage.getItem("jwt");
+    const token = AuthService.getToken();
+
+    if (!token) {
+      throw new Error('No authentication token');
+    }
 
     const res = await axios.post<Keypoint>(
       `http://localhost:8080/api/tours/${tourId}/create-keypoint`,
       keypoint,
       {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
         signal,
       }
     );
@@ -44,15 +69,17 @@ export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
 }
 
 export async function getTourKeyPoints(tourId: number, signal?: AbortSignal) {
-  const token = localStorage.getItem("jwt");
+  const token = AuthService.getToken();
+
+  if (!token) {
+    throw new Error('No authentication token');
+  }
 
   const res = await axios.get<Keypoint[]>(
     `http://localhost:8080/api/tours/${tourId}/keypoints`,
     {
       signal,
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : {},
+      headers: { Authorization: `Bearer ${token}` }
     }
   );
 
@@ -60,15 +87,17 @@ export async function getTourKeyPoints(tourId: number, signal?: AbortSignal) {
 }
 
 export async function deleteTourKeyPoint(keypointId: number, signal?: AbortSignal) {
-  const token = localStorage.getItem("jwt");
+  const token = AuthService.getToken();
+
+  if (!token) {
+    throw new Error('No authentication token');
+  }
 
   const res = await axios.delete<string>(
     `http://localhost:8080/api/tours/keypoints/${keypointId}`,
     {
       signal,
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : {},
+      headers: { Authorization: `Bearer ${token}` }
     }
   );
 
@@ -76,16 +105,18 @@ export async function deleteTourKeyPoint(keypointId: number, signal?: AbortSigna
 }
 
 export async function updateTourKeyPoints(kp: Omit<Keypoint, "id">, keypointId: number, signal?: AbortSignal) {
-  const token = localStorage.getItem("jwt");
+  const token = AuthService.getToken();
+
+  if (!token) {
+    throw new Error('No authentication token');
+  }
 
   const res = await axios.put<Keypoint>(
     `http://localhost:8080/api/tours/keypoints/${keypointId}`,
     kp,
     {
       signal,
-      headers: token
-        ? { Authorization: `Bearer ${token}` }
-        : {},
+      headers: { Authorization: `Bearer ${token}` }
     }
   );
 
