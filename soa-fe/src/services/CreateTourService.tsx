@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Keypoint, Tour } from "../models/Tour";
-import { AuthService } from "./AuthService";
+import AuthService from "./AuthService";
 
 // Backend returns array directly, not wrapped in object
 type ApiTourResponse = Tour[];

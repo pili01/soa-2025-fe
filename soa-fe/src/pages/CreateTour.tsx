@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Map, MapRef, MapLayerMouseEvent, Marker } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Plus, X, MapPin, Trash2 } from 'lucide-react';
-import { AuthService } from '../services/AuthService';
+import AuthService from '../services/AuthService';
 
 interface TourData {
   name: string;

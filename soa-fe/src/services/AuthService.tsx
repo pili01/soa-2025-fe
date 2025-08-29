@@ -3,7 +3,7 @@ import { LoginCredentials, RegisterUserRequest, AuthResponse, User } from '../mo
 
 const API_BASE_URL = 'http://localhost:8080'; // Gateway port
 
-export class AuthService {
+class AuthService {
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/login`, credentials);
@@ -137,3 +137,5 @@ export class AuthService {
     return this.getUserRole() === 'Admin';
   }
 }
+
+export default AuthService;

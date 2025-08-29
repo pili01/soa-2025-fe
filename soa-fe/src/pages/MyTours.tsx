@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Tour } from "../models/Tour";
 import { getTours } from "../services/CreateTourService";
-import { AuthService } from "../services/AuthService";
+import AuthService from "../services/AuthService";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export default function MyTours() {

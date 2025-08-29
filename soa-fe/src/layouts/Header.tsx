@@ -24,10 +24,16 @@ export default function Header() {
                 <NavLink to="/tours" className="nav-link">Tours</NavLink>
               </li>
               <li className="nav-item">
+                <NavLink to="/available-tours" className="nav-link">Available Tours</NavLink>
+              </li>
+              <li className="nav-item">
                 <NavLink to="/create-tour" className="nav-link">Create tour</NavLink>
               </li>
               <li className="nav-item">
                 <NavLink to="/my-tours" className="nav-link">My tours</NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink to="/shopping-cart" className="nav-link">🛒 Cart</NavLink>
               </li>
             </ul>
           </div>

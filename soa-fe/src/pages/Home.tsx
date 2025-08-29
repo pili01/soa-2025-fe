@@ -18,6 +18,9 @@ export default function Home() {
             <Link to="/register" className="btn btn-outline-primary btn-lg px-4">
               Register
             </Link>
+            <Link to="/available-tours" className="btn btn-success btn-lg px-4">
+              Browse Tours
+            </Link>
           </div>
           
           <div className="mt-5">

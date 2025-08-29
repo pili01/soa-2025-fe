@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, UserCheck, UserX, Shield, Crown } from 'lucide-react';
-import { AuthService } from '../services/AuthService';
+import AuthService from '../services/AuthService';
 import { User } from '../models/User';
 
 export default function Admin() {

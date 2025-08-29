@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AuthService } from '../services/AuthService';
+import AuthService from '../services/AuthService';
 import { LoginCredentials } from '../models/User';
 
 export default function Login() {
