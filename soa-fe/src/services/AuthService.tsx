@@ -104,6 +104,15 @@ class AuthService {
     }
   }
 
+  static async getMyProfile(): Promise<User> {
+    const token = this.getToken();
+    if (!token) throw new Error('No authentication token');
+    const resp = await axios.get(`${API_BASE_URL}/api/stakeholders/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return resp.data as User;
+  }
+
   static setToken(token: string): void {
     localStorage.setItem('authToken', token);
   }
