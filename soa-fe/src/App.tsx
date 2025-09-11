@@ -19,6 +19,7 @@ import ShoppingCart from "./pages/ShoppingCart";
 import Tour from "./pages/Tour";
 import TourDetails from "./pages/TourDetails";
 import Header from "./layouts/Header";
+import BlogDetails from "./pages/BlogDetails";
 
 const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: "blog", element: <Blog /> },
+      { path: "blog/:id", element: <BlogDetails /> },
       { path: "tours", element: <Tour /> },
       { path: "available-tours", element: <AvailableTours /> },
       { path: "tour/:tourId", element: <TourDetails /> },
