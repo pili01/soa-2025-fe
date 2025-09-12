@@ -20,6 +20,8 @@ import Tour from "./pages/Tour";
 import TourDetails from "./pages/TourDetails";
 import Header from "./layouts/Header";
 import BlogDetails from "./pages/BlogDetails";
+import CreateTour2 from "./pages/CreateTour2";
+import MyTours2 from "./pages/MyTours2";
 
 const router = createBrowserRouter([
   {
@@ -34,7 +36,9 @@ const router = createBrowserRouter([
       { path: "available-tours", element: <AvailableTours /> },
       { path: "tour/:tourId", element: <TourDetails /> },
       { path: "create-tour", element: <CreateTour /> },
+      { path: "create-tour2", element: <CreateTour2 /> },
       { path: "my-tours", element: <MyTours /> },
+      { path: "my-tours2", element: <MyTours2 /> },
       { path: "shopping-cart", element: <ShoppingCart /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
