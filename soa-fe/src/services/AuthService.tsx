@@ -6,6 +6,7 @@ const API_BASE_URL = 'http://localhost:8080'; // Gateway port
 class AuthService {
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      this.removeToken(); // Clear any existing token before login
       const response = await axios.post(`${API_BASE_URL}/api/login`, credentials);
       return response.data;
     } catch (error) {
@@ -38,6 +39,87 @@ class AuthService {
           throw new Error('Username already exists');
         } else {
           throw new Error('Registration failed. Please try again.');
+        }
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
+  static async getProfilePhoto(imgUrl: string): Promise<string> {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+      const response = await axios.get(`${API_BASE_URL}/api/image/img/${imgUrl}`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error('Failed to fetch profile photo');
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
+  static async updateProfile(userData: FormData): Promise<{ message: string }> {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+      const response = await axios.put(`${API_BASE_URL}/api/stakeholders/updateProfile`, userData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) {
+          throw new Error('Invalid role. Role must be Guide or Tourist.');
+        } else if (error.response?.status === 409) {
+          throw new Error('Username already exists');
+        } else {
+          throw new Error('Update failed. Please try again.');
+        }
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
+  static async logout(): Promise<void> {
+    this.removeToken();
+  }
+
+  static async updatePhoto(photo: File): Promise<{ message: string; photo_url: string; photoName: string }> {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      const formData = new FormData();
+      formData.append('image', photo);
+
+      const response = await axios.post(`${API_BASE_URL}/api/image/save-image`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) {
+          throw new Error('Invalid photo format');
+        } else {
+          throw new Error('Failed to update photo');
         }
       }
       throw new Error('An unexpected error occurred');

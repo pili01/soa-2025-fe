@@ -20,6 +20,7 @@ import Tour from "./pages/Tour";
 import TourDetails from "./pages/TourDetails";
 import Header from "./layouts/Header";
 import BlogDetails from "./pages/BlogDetails";
+import EditProfile from "./pages/EditProfile";
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "admin", element: <Admin /> },
+      { path: "editProfile", element: <EditProfile /> },
       //{ path: "*", element: <ErrorPage /> },
     ],
   },
