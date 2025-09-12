@@ -1,6 +1,7 @@
 import axios from "axios";
 import AuthService from "./AuthService";
 import { Blog, Author } from "../models/Blog";
+import { Comment as BlogComment } from "../models/Comment";
 
 const API = "http://localhost:8080/api";
 const BASE = `${API}/blogs`;
@@ -60,8 +61,46 @@ export async function getBlogs(signal?: AbortSignal): Promise<Blog[]> {
   }
 }
 
+export async function getComments(blogId: number, signal?: AbortSignal): Promise<BlogComment[]> {
+  const res = await axios.get(`${BASE}/comment/${blogId}`, {
+    signal,
+    headers: authHeader(false),
+  });
+
+  const payload = (res.data as any)?.data ?? res.data;
+  if (!Array.isArray(payload)) {
+    throw new Error("Invalid response format: expected BlogComment[]");
+  }
+  const comments: BlogComment[] = payload.map((c: any) => ({
+    id: Number(c.id),
+    blogId: Number(c.blogId),
+    userId: Number(c.userId),
+    content: String(c.content ?? ""),
+    createdAt: new Date(c.createdAt ?? ""),
+    updatedAt: c.updatedAt ? new Date(c.updatedAt) : undefined,
+    authorUsername: String(c.authorUsername ?? ""),
+  }));
+  return comments;
+}
+
+export async function deleteComment(commentId: number, signal?: AbortSignal): Promise<void> {
+  await axios.delete(`${BASE}/comment/${commentId}`, {
+    signal,
+    headers: authHeader(true),
+  });
+}
+
+export async function updateComment(commentId: number, content: string, signal?: AbortSignal): Promise<any> {
+  const res = await axios.put(
+    `${BASE}/comment/${commentId}`,
+    { content },
+    { signal, headers: authHeader(true) }
+  );
+  return res.data as BlogComment;
+}
+
 export async function getBlogById(id: number, signal?: AbortSignal): Promise<Blog> {
-  const res = await axios.get(`${BASE}/${id}`, {
+  const res = await axios.get(`${BASE}/get/${id}`, {
     signal,
     headers: authHeader(false),
   });
@@ -87,6 +126,15 @@ export async function getBlogById(id: number, signal?: AbortSignal): Promise<Blo
     }
   } catch {}
   return blog;
+}
+
+export async function createComment(blogId: number, content: string, signal?: AbortSignal): Promise<BlogComment> {
+  const res = await axios.post(
+    `${BASE}/comment`,
+    { blogId, content },
+    { signal, headers: authHeader(true) }
+  );
+  return res.data as BlogComment;
 }
 
 export async function likeBlog(id: number, signal?: AbortSignal): Promise<void> {
