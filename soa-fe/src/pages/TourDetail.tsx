@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import TourMap from "../components/map";
+import TourMap from "../components/Map";
 import type { Keypoint, Tour } from "../models/Tour";
 import { getTourKeyPoints, getTours } from "../services/CreateTourService";
 
@@ -16,18 +16,11 @@ export default function MyTours() {
 
       (async () => {
         try {
-          //const demoTours = await getTours(ac.signal);
-          //setTours(demoTours);
-
-          console.log("Tours", tours);
 
           const tourId = 3;
-          console.log("Tour Id", tourId);
           if (tourId == null) return;
 
-          console.log("Vadimo kps");
           const kps = await getTourKeyPoints(tourId, ac.signal);
-          console.log("Kps:", kps);
           setKeyPoints(kps);
         } catch (err: any) {
           if (axios.isCancel?.(err) || err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {

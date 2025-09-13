@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getBlogById, getMyLikeStatus, toggleLike } from "../services/BlogService";
+import { getBlogById, getMyLikeStatus, toggleLike, getComments, updateComment, deleteComment, createComment } from "../services/BlogService";
 import "../styles/blog.scss";
 import { Blog } from "../models/Blog";
+import { Comment } from "../models/Comment";
+import AuthService from "../services/AuthService";
 
 type RouteParams = { id: string };
 
 export default function BlogDetails() {
+  const currentUserId = AuthService.getCurrentUserId ? AuthService.getCurrentUserId() : null;
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editCommentId, setEditCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
   const { id: idParam } = useParams<RouteParams>();
   const id = useMemo(() => Number.parseInt(idParam ?? "", 10), [idParam]);
 
@@ -15,6 +21,9 @@ export default function BlogDetails() {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [comments, setComments] = useState<Array<Comment>>([]);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
 
   useEffect(() => {
     if (!Number.isInteger(id) || id <= 0) {
@@ -31,6 +40,9 @@ export default function BlogDetails() {
           const s = await getMyLikeStatus(id);
           setLiked(s.liked);
           setLikesCount(s.count);
+
+          const allComments = await getComments(id); // Pretpostavimo da postoji funkcija za dobijanje komentara
+          setComments(allComments);
         } catch {
           // ako nije ulogovan, samo prikaži broj iz modela ili 0
           setLikesCount(b.likes ?? 0);
@@ -76,6 +88,7 @@ export default function BlogDetails() {
     ? `${blog.author.name ?? ""} ${blog.author.surname ?? ""}`.trim() || blog.author.username
     : `User #${blog.userId}`;
 
+  
   return (
     <section className="blog-details">
       <div className="details-hero">
@@ -116,7 +129,135 @@ export default function BlogDetails() {
           👎
         </button>
 
-        <Link to="/blogs" className="back-link">← Back to list</Link>
+      <div className="details-actions d-flex align-items-center">
+        
+        <button
+          className="btn btn-sm btn-success ms-3"
+          onClick={() => setAddModalOpen(true)}
+        >
+          Add Comment
+        </button>
+
+        <Link to="/blogs" className="back-link ms-3">← Back to list</Link>
+      </div>
+
+      {/* Add Comment Modal */}
+      {addModalOpen && (
+        <div className="modal show" style={{ display: 'block',background: 'rgba(0,0,0,0.3)'}}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Add Comment</h5>
+                <button type="button" className="btn-close" onClick={() => setAddModalOpen(false)}></button>
+              </div>
+              <div className="modal-body">
+                <textarea
+                  className="form-control"
+                  value={newCommentText}
+                  onChange={e => setNewCommentText(e.target.value)}
+                  rows={3}
+                  placeholder="Enter your comment..."
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    if (newCommentText.trim()) {
+                      const created = await createComment(id, newCommentText.trim());
+                      setComments([...comments, created]);
+                      setAddModalOpen(false);
+                      setNewCommentText("");
+                    }
+                  }}
+                >Submit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+
+      {/* Comments section */}
+      <div className="blog-details blog-comments mt-4 p-3 border rounded bg-dark">
+        <h5 className="mb-3">Comments:</h5>
+        {comments.length === 0 && <div className="text-muted">No comments yet.</div>}
+        {comments.map(c => (
+          <div key={c.id} className="mb-3 pb-2 border-bottom">
+            <div className="d-flex align-items-center mb-1">
+              <strong className="me-2">{c.authorUsername}</strong>
+              <span className="text-muted" style={{ fontSize: '0.9em' }}>
+                {new Date(c.createdAt).toLocaleString()}
+              </span>
+              {currentUserId && c.userId === currentUserId && (
+                <>
+                  <button
+                    className="btn btn-sm btn-outline-primary ms-2"
+                    onClick={() => {
+                      setEditCommentId(c.id);
+                      setEditCommentText(c.content);
+                      setEditModalOpen(true);
+                    }}
+                  >Edit</button>
+                  <button
+                    className="btn btn-sm btn-outline-danger ms-2"
+                    onClick={async () => {
+                      if (window.confirm("Are you sure you want to delete this comment?")) {
+                        await deleteComment(c.id);
+                        setComments(comments.filter(com => com.id !== c.id));
+                      }
+                    }}
+                  >Delete</button>
+                </>
+              )}
+            </div>
+            <div>{c.content}</div>
+            {c.updatedAt && (
+              <div className="text-muted" style={{ fontSize: '0.85em' }}>
+                Edited: {new Date(c.updatedAt).toLocaleString()}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Edit Comment Modal */}
+        {editModalOpen && (
+          <div className="modal show" style={{ display: 'block', background: 'rgba(0,0,0,0.3)' }}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit Comment</h5>
+                  <button type="button" className="btn-close" onClick={() => setEditModalOpen(false)}></button>
+                </div>
+                <div className="modal-body">
+                  <textarea
+                    className="form-control"
+                    value={editCommentText}
+                    onChange={e => setEditCommentText(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={async () => {
+                      if (editCommentId && editCommentText.trim()) {
+                        const updated = await updateComment(editCommentId, editCommentText.trim());
+                        console.log(updated.data)
+                        setComments(comments.map(com => com.id === editCommentId ? { ...com, content: updated.data.content, updatedAt: updated.data.updatedAt } : com));
+                        setEditModalOpen(false);
+                      }
+                    }}
+                  >Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

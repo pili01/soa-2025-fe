@@ -45,7 +45,7 @@ export default function BlogList() {
           <article key={b.id} className="blog-card">
             <div className="blog-card__body">
               <h3 className="blog-card__title">
-                <Link to={`/blogs/${b.id}`} className="blog-card__link">
+                <Link to={`/blog/${b.id}`} className="blog-card__link">
                   {b.title}
                 </Link>
               </h3>

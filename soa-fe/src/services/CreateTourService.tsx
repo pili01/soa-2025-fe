@@ -1,9 +1,16 @@
 import axios from "axios";
-import { Keypoint, Tour } from "../models/Tour";
+import { Keypoint, Tour, TourReview } from "../models/Tour";
 import AuthService from "./AuthService";
 
 // Backend returns array directly, not wrapped in object
 type ApiTourResponse = Tour[];
+
+export type CreateReviewDto = {
+  tourId: number;
+  rating: number;
+  comment: string;
+  visitDate: string;
+};
 
 
 export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
@@ -117,6 +124,54 @@ export async function updateTourKeyPoints(kp: Omit<Keypoint, "id">, keypointId: 
     {
       signal,
       headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+  return res.data;
+}
+
+export async function getTourReview(tourId: number, signal?: AbortSignal){
+  const token = AuthService.getToken();
+
+  if(!token){
+    throw new Error('No authentication token');
+  }
+
+  const res = await axios.get<TourReview[]>(
+    `http://localhost:8080/api/tours/${tourId}/reviews`,
+    {
+      signal,
+      headers: {Authorization: `Bearer ${token}`}
+    }
+  );
+  return res.data;
+}
+
+export async function createTourReview(
+  review: CreateReviewDto,
+  files: File[] = [],
+  signal?: AbortSignal
+): Promise<any> {
+  const token = AuthService.getToken();
+  if (!token) throw new Error("No authentication token");
+
+  const form = new FormData();
+  form.append("tourId", String(review.tourId));
+  form.append("rating", String(review.rating));
+  form.append("comment", review.comment);
+  form.append("visitDate", String(review.visitDate));
+  form.append("commentDate", new Date().toISOString());
+
+  files.forEach((f) => form.append("images", f));
+
+  const res = await axios.post(
+    "http://localhost:8080/api/tours/reviews",
+    form,
+    {
+      signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
   );
 

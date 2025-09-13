@@ -98,7 +98,7 @@ export default function MyTours() {
                  <div className="row">
                    {tours.map((tour, index) => (
                      <div key={tour.id || index} className="col-md-6 mb-3">
-                       <div className="card h-100">
+                       <div className="card h-100" onClick={() => navigate(`/tour-detail/${tour.id}`)}>
                          <div className="card-body">
                            <h5 className="card-title">{tour.name || `Tura ${index + 1}`}</h5>
                            <p className="card-text text-muted">{tour.description || 'Nema opisa'}</p>
@@ -123,8 +123,6 @@ export default function MyTours() {
             </div>
           </div>
         </div>
-
-
       </div>
     </div>
   );
