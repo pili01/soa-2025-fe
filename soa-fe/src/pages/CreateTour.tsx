@@ -1,24 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, MapRef, MapLayerMouseEvent, Marker } from '@vis.gl/react-maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { Plus, X, MapPin, Trash2 } from 'lucide-react';
+import { Plus, X, MapPin, Trash2, Edit3 } from 'lucide-react';
 import AuthService from '../services/AuthService';
+import TourMap from '../components/Map'
+import { Keypoint } from '../models/Tour';
+import { MapLayerMouseEvent, MapRef } from '@vis.gl/react-maplibre';
 
 interface TourData {
   name: string;
   description: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   tags: string[];
-}
-
-interface Keypoint {
-  name: string;
-  description: string;
-  imageUrl: string;
-  latitude: number;
-  longitude: number;
-  ordinal: number;
 }
 
 export default function CreateTour() {
@@ -53,7 +45,7 @@ export default function CreateTour() {
   });
   
   const [keypoints, setKeypoints] = useState<Keypoint[]>([]);
-  
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -83,12 +75,14 @@ export default function CreateTour() {
   const handleMapClick = (e: MapLayerMouseEvent) => {
     const { lng, lat } = e.lngLat;
     const newKeypoint: Keypoint = {
+      id: 0,
+      tourId: 0,
       name: '',
       description: '',
       imageUrl: '',
       latitude: lat,
       longitude: lng,
-      ordinal: 0 // Will be automatically set by useEffect
+      ordinal: 0
     };
     setKeypoints(prev => [...prev, newKeypoint]);
   };
@@ -375,11 +369,21 @@ export default function CreateTour() {
 
                   {keypoints.map((keypoint, index) => (
                     <div key={index} className="card mb-3 border-primary keypoint-card">
-                      <div className="card-header d-flex justify-content-between align-items-center">
-                        <h6 className="mb-0">
-                          <MapPin size={16} className="me-2" />
-                          Keypoint {index + 1}
-                        </h6>
+                    <div className="card-header d-flex justify-content-between align-items-center">
+                      <h6 className="mb-0 d-flex align-items-center">
+                        <MapPin size={16} className="me-2" />
+                        Keypoint {index + 1}
+                      </h6>
+
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setSelectedIndex(index)}
+                        >
+                          <Edit3 size={14} />
+                        </button>
+
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-danger"
@@ -388,6 +392,7 @@ export default function CreateTour() {
                           <Trash2 size={14} />
                         </button>
                       </div>
+                    </div>
                       <div className="card-body">
                         <div className="row">
                           <div className="col-md-6">
@@ -487,6 +492,8 @@ export default function CreateTour() {
                       className="btn btn-outline-primary"
                       onClick={() => {
                         const newKeypoint: Keypoint = {
+                          id: 0,
+                          tourId: 0,
                           name: '',
                           description: '',
                           imageUrl: '',
@@ -525,42 +532,34 @@ export default function CreateTour() {
               <small className="text-muted">Klikni na mapu da dodaš keypoint</small>
             </div>
             <div className="card-body p-0">
-              <Map
-                ref={mapRef}
-                id="create-tour-map"
-                initialViewState={initialView}
-                mapStyle="https://api.maptiler.com/maps/streets-v2/style.json?key=eQ7kHusRBi4TZNe7vYuj"
-                onClick={handleMapClick}
-                style={{ height: '500px', width: '100%' }}
-              >
-                {keypoints.map((keypoint, index) => (
-                  <Marker
-                    key={`keypoint-${index}`}
-                    longitude={keypoint.longitude}
-                    latitude={keypoint.latitude}
-                    anchor="bottom"
-                  >
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        backgroundColor: '#0d6efd',
-                        border: '2px solid white',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-                  </Marker>
-                ))}
-              </Map>
+            <TourMap
+              mode="edit"
+              checkPoints={keypoints}
+              selectedId={selectedIndex !== null ? keypoints[selectedIndex]?.id : undefined}
+              onAddKeyPoint={({ latitude, longitude }) => {
+                if (selectedIndex !== null) {
+                  setKeypoints(prev =>
+                    prev.map((kp, i) =>
+                      i === selectedIndex ? { ...kp, latitude, longitude } : kp
+                    )
+                  );
+                  setSelectedIndex(null);
+                  return;
+                }
+
+                const newKp: Keypoint = {
+                  id: 0,
+                  tourId: 0,
+                  name: '',
+                  description: '',
+                  imageUrl: '',
+                  latitude,
+                  longitude,
+                  ordinal: keypoints.length + 1
+                };
+                setKeypoints(prev => [...prev, newKp]);
+              }}
+            />
             </div>
           </div>
         </div>

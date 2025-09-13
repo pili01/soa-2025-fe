@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
+import TourMap from '../components/Map';
+import { Keypoint, TourReview } from '../models/Tour';
+import AddReview from '../components/AddReview';
+import { getTourReview, createTourReview, CreateReviewDto } from '../services/CreateTourService';
+import Message from '../components/Message';
+import ReviewGallery from '../components/ReviewGallery';
 
 interface Tour {
   id: number;
@@ -24,52 +30,53 @@ interface Tour {
   };
 }
 
-interface Keypoint {
-  id: number;
-  name: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  ordinal: number;
-  imageUrl?: string;
-}
-
-interface Review {
-  id: number;
-  rating: number;
-  comment: string;
-  touristId: number;
-  visitDate: string;
-  commentDate: string;
-  imageUrls: string[];
-}
-
 interface TourResponse {
   tour: Tour;
   firstKeypoint?: Keypoint;
   keypoints?: Keypoint[];
-  reviews: Review[];
+  reviews: TourReview[];
   message: string;
 }
 
 const TourDetails: React.FC = () => {
   const { tourId } = useParams<{ tourId: string }>();
   const [tourInfo, setTourInfo] = useState<TourResponse | null>(null);
+  const [tourReviews, setTourReviews] = useState<TourReview[] | null>(null);
   const [isPurchased, setIsPurchased] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
   const navigate = useNavigate();
+  const [banner, setBanner] = useState<{type:'success'|'error'|'info'|'warning'; text:string}|null>(null);
+  const [showAllGallery, setShowAllGallery] = useState(false);
+  const [openReviewGalleryId, setOpenReviewGalleryId] = useState<number | null>(null);
 
+  
   useEffect(() => {
-    if (tourId) {
-      checkPurchaseStatusAndFetchTour();
-      checkCartStatus();
-    }
+    if (!tourId) return;
+
+    let cancelled = false;
+
+    checkPurchaseStatusAndFetchTour();
+    checkCartStatus();
+
+    getTourReview(Number(tourId))
+      .then((data) => {
+        if (!cancelled) {
+          setTourReviews(data);
+          setError('');
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) {
+          setError(err?.response?.data?.message ?? err?.message ?? 'Greška pri učitavanju recenzija');
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [tourId]);
 
-  // Dodatni useEffect za proveru korpe
   useEffect(() => {
     if (tourId) {
       checkCartStatus();
@@ -81,6 +88,16 @@ const TourDetails: React.FC = () => {
     setIsInCart(inCart);
   };
 
+
+  const addReview = async (dto: CreateReviewDto, files: File[]) => {
+    try {
+      const saved = await createTourReview(dto, files);
+      setTourReviews(prev => prev ? [saved, ...prev] : [saved]);
+      setBanner({ type: 'success', text: 'Uspešno ste dodali recenziju.' });
+    } catch (err: any) {
+      setBanner({ type: 'error', text: err?.response?.data?.message ?? err?.message ?? 'Greška pri dodavanju recenzije' });
+    }
+  };
 
 
   const checkPurchaseStatusAndFetchTour = async () => {
@@ -183,7 +200,7 @@ const TourDetails: React.FC = () => {
 
       if (response.ok) {
         alert('Tura uspešno dodana u korpu!');
-        setIsInCart(true); // Ažuriraj state
+        setIsInCart(true);
         navigate('/shopping-cart');
       } else {
         const errorData = await response.json();
@@ -212,6 +229,11 @@ const TourDetails: React.FC = () => {
     }
     return `${meters}m`;
   };
+
+  const totalImages = useMemo(
+    () => (tourReviews ?? []).reduce((acc, r) => acc + (r.imageUrls?.length ?? 0), 0),
+    [tourReviews]
+  );
 
   if (loading) {
     return (
@@ -253,8 +275,17 @@ const TourDetails: React.FC = () => {
 
   return (
     <div className="container mt-4">
+      {banner && (
+        <Message
+          type={banner.type}
+          text={banner.text}
+          duration={3000}
+          onClose={() => setBanner(null)}
+        />
+      )}
       <div className="row">
         <div className="col-12">
+          
           {/* Tour Header */}
           <div className="card mb-4">
             <div className="card-body">
@@ -410,33 +441,75 @@ const TourDetails: React.FC = () => {
             </div>
           </div>
 
+          {/*Map section*/}
+          <div className="card shadow-sm border-0 mb-3">
+            <div className="card-body p-0">
+              <div className="ratio ratio-16x9">
+                <div className="bg-light d-flex align-items-center justify-content-center">
+                      <TourMap
+                        mode="view"
+                        checkPoints={ tourInfo.keypoints ?? (tourInfo.firstKeypoint ? [tourInfo.firstKeypoint] : []) }   
+                      />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Reviews Section */}
             <div className="card">
               <div className="card-header">
                 <h3 className="mb-0">Recenzije</h3>
+                    <div className="d-flex align-items-center gap-2">
+                      <AddReview
+                        tourId={tourInfo.tour.id}
+                        onCreated={addReview}
+                      />
+                    </div>
               </div>
               <div className="card-body">
-              {tourInfo.reviews && tourInfo.reviews.length > 0 ? (
-                tourInfo.reviews.map((review) => (
-                  <div key={review.id} className="border-bottom pb-3 mb-3">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div>
-                                                 <h6 className="mb-1">Turista {review.touristId}</h6>
-                        <div className="mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <span key={i} className={`text-${i < review.rating ? 'warning' : 'muted'}`}>
-                              ★
-                            </span>
-                          ))}
-                          <span className="ms-2 text-muted">({review.rating}/5)</span>
-                        </div>
-                        <p className="mb-1">{review.comment}</p>
+              {tourReviews && tourReviews.length > 0 ? (
+                tourReviews.map((review) => (
+                <div key={review.id} className="border-bottom pb-3 mb-3">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 className="mb-1">Turista {review.touristId}</h6>
+                      <div className="mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={`text-${i < review.rating ? 'warning' : 'muted'}`}>★</span>
+                        ))}
+                        <span className="ms-2 text-muted">({review.rating}/5)</span>
                       </div>
-                      <small className="text-muted">
-                         {new Date(review.commentDate).toLocaleDateString()}
-                      </small>
+                      <p className="mb-1">{review.comment}</p>
+
+                      {(review.imageUrls?.length ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary mt-2"
+                          onClick={() =>
+                            setOpenReviewGalleryId(id => id === review.id ? null : review.id)
+                          }
+                        >
+                          {openReviewGalleryId === review.id
+                            ? 'Sakrij slike'
+                            : `Slike (${review.imageUrls.length})`}
+                        </button>
+                      )}
                     </div>
+
+                    <small className="text-muted">
+                      {new Date(review.commentDate).toLocaleDateString()}
+                    </small>
                   </div>
+
+                  {openReviewGalleryId === review.id && (
+                    <div className="mt-3">
+                      <ReviewGallery
+                        images={review.imageUrls ?? (review as any).images ?? []}
+                        title={`Slike recenzije #${review.id}`}
+                      />
+                    </div>
+                  )}
+                </div>
                 ))
               ) : (
                 <p className="text-muted">Još nema recenzija za ovu turu.</p>

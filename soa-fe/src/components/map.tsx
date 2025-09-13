@@ -144,15 +144,24 @@ export default function TourMap({
               anchor="bottom"
               offset={[0, 0]}
             >
-              <img
-                src={pinIcon}
-                alt={k.name}
-                width={isSelected ? 34 : 28}
-                height={isSelected ? 34 : 28}
-                draggable={false}
-                onClick={(e) => e.stopPropagation()}
-                style={{ display: "block", userSelect: "none", cursor: "pointer" }}
-              />
+              <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    backgroundColor: '#0d6efd',
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                {index + 1}
+                </div>
             </Marker>
           );
         })}
