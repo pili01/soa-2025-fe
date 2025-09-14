@@ -21,6 +21,7 @@ import TourDetails from "./pages/TourDetails";
 import Header from "./layouts/Header";
 import BlogDetails from "./pages/BlogDetails";
 import EditProfile from "./pages/EditProfile";
+import Followings from "./pages/Followings";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: "register", element: <Register /> },
       { path: "admin", element: <Admin /> },
       { path: "editProfile", element: <EditProfile /> },
+      { path: "followings", element: <Followings /> },
       //{ path: "*", element: <ErrorPage /> },
     ],
   },

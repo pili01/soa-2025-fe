@@ -73,6 +73,9 @@ export default function Header() {
                 <NavLink to="/my-tours" className="nav-link">My tours</NavLink>
               </li>
               <li className="nav-item">
+                <NavLink to="/followings" className="nav-link">Followings</NavLink>
+              </li>
+              <li className="nav-item">
                 <NavLink to="/shopping-cart" className="nav-link">🛒 Cart</NavLink>
               </li>
             </ul>

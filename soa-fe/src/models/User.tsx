@@ -33,3 +33,11 @@ export interface User {
 export interface AuthResponse {
   token: string;
 }
+
+export interface Follower {
+  id: number;
+  username: string;
+  name: string;
+  surname: string;
+  followedByMe: boolean;
+}

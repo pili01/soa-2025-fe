@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getBlogs, getBlogLikesCount } from "../services/BlogService";
+import { getBlogsForMe, getBlogLikesCount } from "../services/BlogService";
 import "../styles/blog.scss";
 import { Blog } from "../models/Blog";
 
@@ -12,7 +12,7 @@ export default function BlogList() {
     (async () => {
       setLoading(true);
       try {
-        const base = await getBlogs(); // Blog[]
+        const base = await getBlogsForMe(); // Blog[]
         // dopuni broj lajkova (ako backend već ne vraća)
         const withCounts = await Promise.all(
           base.map(async (b) => {
