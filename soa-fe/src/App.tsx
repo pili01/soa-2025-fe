@@ -23,6 +23,7 @@ import BlogDetails from "./pages/BlogDetails";
 import CreateTour2 from "./pages/CreateTour2";
 import MyTours2 from "./pages/TourDetail";
 import EditProfile from "./pages/EditProfile";
+import Followings from "./pages/Followings";
 import CreateBlog from "./components/CreateBlog";
 import WhereAreYou from "./pages/WhereAreYou";
 
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: "register", element: <Register /> },
       { path: "admin", element: <Admin /> },
       { path: "editProfile", element: <EditProfile /> },
+      { path: "followings", element: <Followings /> },
       { path: "/blogs/create", element: <CreateBlog /> },
       { path: "/where-are-you", element: <WhereAreYou /> },
       //{ path: "*", element: <ErrorPage /> },

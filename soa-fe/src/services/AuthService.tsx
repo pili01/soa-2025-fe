@@ -153,6 +153,33 @@ class AuthService {
     }
   }
 
+  static async getUsersForSearch(): Promise<User[]> {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/stakeholders/usersForSearch`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new Error('Unauthorized. Please login again.');
+        } else if (error.response?.status === 403) {
+          throw new Error('Access denied. Admin role required.');
+        } else {
+          throw new Error('Failed to retrieve users.');
+        }
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
   static async blockUser(userId: number, isBlocked: boolean): Promise<{ message: string; user_id: number }> {
     try {
       const token = this.getToken();
@@ -190,6 +217,15 @@ class AuthService {
     const token = this.getToken();
     if (!token) throw new Error('No authentication token');
     const resp = await axios.get(`${API_BASE_URL}/api/stakeholders/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return resp.data as User;
+  }
+
+  static async getProfileById(userId: number): Promise<User> {
+    const token = this.getToken();
+    if (!token) throw new Error('No authentication token');
+    const resp = await axios.get(`${API_BASE_URL}/api/stakeholders/profile/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return resp.data as User;

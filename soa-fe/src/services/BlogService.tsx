@@ -67,6 +67,41 @@ export async function getBlogs(signal?: AbortSignal): Promise<Blog[]> {
     return blogs;
   }
 }
+export async function getBlogsForMe(signal?: AbortSignal): Promise<Blog[]> {
+  const res = await axios.get(`${BASE}/?page=0&limit=200`, {
+    signal,
+    headers: authHeader(false),
+  });
+
+  const payload = (res.data as any)?.data ?? res.data;
+  if (!Array.isArray(payload)) {
+    throw new Error("Invalid response format: expected Blog[]");
+  }
+  const blogs = payload.map(normalizeBlog);
+
+  const token = AuthService.getToken();
+  if (!token) return blogs;
+
+  try {
+    const me = await AuthService.getMyProfile();
+    return blogs.map(b =>
+      b.userId === me.id
+        ? {
+            ...b,
+            author: {
+              id: me.id,
+              username: me.username,
+              name: me.name,
+              surname: me.surname,
+              photo_url: me.photo_url,
+            },
+          }
+        : b
+    );
+  } catch {
+    return blogs;
+  }
+}
 
 export async function getComments(blogId: number, signal?: AbortSignal): Promise<BlogComment[]> {
   const res = await axios.get(`${BASE}/comment/${blogId}`, {

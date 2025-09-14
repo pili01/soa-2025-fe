@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getBlogs, getBlogLikesCount } from "../services/BlogService";
 import { Blog } from "../models/Blog";
 import Message from "../components/Message";
+import { getBlogsForMe, getBlogLikesCount } from "../services/BlogService";
 import "../styles/blog.scss";
 
 type BlogWithCounts = Blog & { likes?: number };
@@ -36,7 +36,8 @@ export default function BlogList() {
       setLoading(true);
       setErr("");
       try {
-        const base = await getBlogs();
+        const base = await getBlogsForMe(); // Blog[]
+        // dopuni broj lajkova (ako backend već ne vraća)
         const withCounts = await Promise.all(
           base.map(async (b) => {
             try {
