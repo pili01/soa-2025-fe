@@ -20,6 +20,7 @@ export interface TourReview {
   comment: string;
   visitDate: string | Date;
   commentDate: string | Date;
+  images: string[];
   imageUrls: string[];
 }
 

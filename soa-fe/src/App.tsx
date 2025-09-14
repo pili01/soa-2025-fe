@@ -20,8 +20,12 @@ import Tour from "./pages/Tour";
 import TourDetails from "./pages/TourDetails";
 import Header from "./layouts/Header";
 import BlogDetails from "./pages/BlogDetails";
+import CreateTour2 from "./pages/CreateTour2";
+import MyTours2 from "./pages/TourDetail";
 import EditProfile from "./pages/EditProfile";
 import Followings from "./pages/Followings";
+import CreateBlog from "./components/CreateBlog";
+import WhereAreYou from "./pages/WhereAreYou";
 
 const router = createBrowserRouter([
   {
@@ -36,13 +40,17 @@ const router = createBrowserRouter([
       { path: "available-tours", element: <AvailableTours /> },
       { path: "tour/:tourId", element: <TourDetails /> },
       { path: "create-tour", element: <CreateTour /> },
+      { path: "create-tour2", element: <CreateTour2 /> },
       { path: "my-tours", element: <MyTours /> },
+      { path: "tour-detail/:id", element: <TourDetails /> },
       { path: "shopping-cart", element: <ShoppingCart /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "admin", element: <Admin /> },
       { path: "editProfile", element: <EditProfile /> },
       { path: "followings", element: <Followings /> },
+      { path: "/blogs/create", element: <CreateBlog /> },
+      { path: "/where-are-you", element: <WhereAreYou /> },
       //{ path: "*", element: <ErrorPage /> },
     ],
   },

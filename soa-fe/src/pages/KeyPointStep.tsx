@@ -1,5 +1,5 @@
 import { Check, Edit3, MapPin, Plus, Trash2, X } from 'lucide-react';
-import TourMap from '../components/map';
+import TourMap from '../components/Map';
 import { Keypoint } from '../models/Tour';
 
 interface KeypointsStepProps {
@@ -39,11 +39,7 @@ export default function KeypointsStep({
                     <p className="text-gray-600 text-sm mb-2">{kp.description}</p>
                     <p className="text-xs text-gray-500">Koordinate: {kp.latitude}, {kp.longitude}</p>
                     </div>
-                    <button className="ml-4 p-2 text-orange-500 hover:bg-orange-100 rounded-lg transition-colors"
-                            onClick={() => {setCurrentKeyPoint(kp); 
-                                            setMode('edit');}}>
-                    <Edit3 className="h-4 w-4" />
-                    </button>
+
                     <button
                     className="ml-2 p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
                     onClick={() => {

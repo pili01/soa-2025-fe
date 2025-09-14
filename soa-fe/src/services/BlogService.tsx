@@ -6,6 +6,13 @@ import { Comment as BlogComment } from "../models/Comment";
 const API = "http://localhost:8080/api";
 const BASE = `${API}/blogs`;
 
+type CreateBlogRequest = {
+  title: string;
+  content: string;
+};
+
+type ApiResponse<T> = { success: boolean; data: T };
+
 function authHeader(required = true) {
   const token = AuthService.getToken();
   if (!token && required) throw new Error("No authentication token");
@@ -208,4 +215,14 @@ export async function toggleLike(blogId: number, signal?: AbortSignal): Promise<
     headers: authHeader(true),
   });
   return (res.data as any).data as { liked: boolean; count: number };
+}
+
+export async function createBlog(req: { title: string; content: string }) {
+  const res = await axios.post<ApiResponse<Blog>>(`http://localhost:8080/api/blogs`, req, {
+          headers: {
+        ...authHeader(true),
+        "Content-Type": "application/json"
+      }
+  });
+  return res.data.data;
 }
