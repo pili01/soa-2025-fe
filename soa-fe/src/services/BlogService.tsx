@@ -68,7 +68,7 @@ export async function getBlogs(signal?: AbortSignal): Promise<Blog[]> {
   }
 }
 export async function getBlogsForMe(signal?: AbortSignal): Promise<Blog[]> {
-  const res = await axios.get(`${BASE}?page=0&limit=200`, {
+  const res = await axios.get(`${BASE}/?page=0&limit=200`, {
     signal,
     headers: authHeader(false),
   });
