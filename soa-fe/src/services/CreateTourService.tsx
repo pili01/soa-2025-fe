@@ -1,12 +1,9 @@
 import axios from "axios";
 import { Keypoint, Tour } from "../models/Tour";
 
-const token = localStorage.getItem("jwt");
-
 interface ApiTourResponse {
   tours: Tour[];
 }
-
 
 export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
     const token = localStorage.getItem("jwt");
@@ -56,7 +53,7 @@ export async function getTourKeyPoints(tourId: number, signal?: AbortSignal) {
     }
   );
 
-  return res.data;
+  return res.data ?? [];
 }
 
 export async function deleteTourKeyPoint(keypointId: number, signal?: AbortSignal) {

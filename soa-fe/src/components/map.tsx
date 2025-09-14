@@ -2,12 +2,15 @@ import { Layer, Map, MapLayerMouseEvent, MapRef, Marker, Source } from "@vis.gl/
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import pinIcon from "../assets/map-point.png";
+import pinPosition from "../assets/my-location.png";
 import { useDrivingRoute } from "../hooks/useDrivingRoute";
+import { Position } from "../models/Position";
 import type { Keypoint } from "../models/Tour";
+import { createNewPosition, getPosition } from "../services/PositionService";
 
 export type TourMapProps = {
   mode: "view" | "edit";
-  checkPoints: Keypoint[];
+  checkPoints?: Keypoint[];
   selectedId?: string | number;
   draftLocation?: { latitude: number; longitude: number };
   onAddKeyPoint?: (pos: { latitude: number; longitude: number }) => void;
@@ -27,6 +30,15 @@ export default function TourMap({
 }: TourMapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const [pickMode, setPickMode] = useState(false);
+  type RawPos = any;
+
+  const [position, setPosition] = useState({
+    id: 1,
+    userId: 0,
+    longitude: 0,
+    latitude: 0
+  });
+
 
   const initialView = useMemo(
     () => ({
@@ -48,6 +60,20 @@ export default function TourMap({
       })),
     [checkPoints]
   );
+
+  useEffect(() => {
+    const fetchPosition = async () => {
+      try {
+        const pos = await getPosition(1);
+        setPosition(pos);
+      } catch (err) {
+        console.error("Failed to load position", err);
+      }
+    };
+
+    fetchPosition();
+  }, []);
+
 
   const { segments, bounds } = useDrivingRoute(points);
 
@@ -73,10 +99,11 @@ export default function TourMap({
       if (pickMode) {
         const pos = { latitude: +lat, longitude: +lng };
 
-        console.log(
-          "coords:",
-          pos,
-        );
+        const position: Position = { id: 0, userId: 0, latitude: +lat, longitude: +lng };
+
+        createNewPosition(position);
+        setPosition(position);
+        
 
         if (onPickCoords) onPickCoords(pos);
         else onAddKeyPoint?.(pos);
@@ -164,6 +191,20 @@ export default function TourMap({
             latitude={draftLocation?.latitude ?? 0}
           />
         )}
+
+        {position && Number(position.latitude) !== 0 && Number(position.longitude) !== 0 && (
+          <Marker longitude={position.longitude} latitude={position.latitude} anchor="bottom">
+            <img
+              src={pinPosition}
+              alt="marker"
+              width={34}
+              height={34}
+              draggable={false}
+              style={{ display: "block", userSelect: "none" }}
+            />
+          </Marker>
+          )}
+
 
         <Source id="route-segments" type="geojson" data={segmentsFC}>
           <Layer
