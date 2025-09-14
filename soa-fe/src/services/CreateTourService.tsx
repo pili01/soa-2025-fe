@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Keypoint, Tour, TourReview } from "../models/Tour";
 import AuthService from "./AuthService";
+import { Position } from "../models/Position";
 
 // Backend returns array directly, not wrapped in object
 type ApiTourResponse = Tour[];
@@ -12,6 +13,9 @@ export type CreateReviewDto = {
   visitDate: string;
 };
 
+interface ApiPositionResponse {
+  position: Position;
+}
 
 export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
     const token = AuthService.getToken();
