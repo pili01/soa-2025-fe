@@ -50,6 +50,7 @@ export default function BlogDetails() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editCommentId, setEditCommentId] = useState<number | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState('/default-profile.png');
 
   const [err, setErr] = useState("");
   const [info, setInfo] = useState("");
@@ -66,6 +67,8 @@ export default function BlogDetails() {
       setErr("");
       try {
         const b = await getBlogById(id);
+        const photoUrl = b.author?.photo_url ? await AuthService.getProfilePhoto(b.author.photo_url) : '/default-profile.png';
+        setProfilePhoto(photoUrl);
         setBlog(b);
 
         try {
@@ -220,7 +223,7 @@ export default function BlogDetails() {
             <div className="d-flex align-items-center gap-2 text-white-50">
               {blog.author?.photo_url && (
                 <img
-                  src={blog.author.photo_url}
+                  src={profilePhoto}
                   alt={aName}
                   className="rounded-circle border"
                   style={{ width: 36, height: 36, objectFit: "cover" }}
@@ -280,7 +283,7 @@ export default function BlogDetails() {
                 <div className="text-muted">No comments yet.</div>
               )}
               {comments.length > 0 && (
-                <ul className="list-group list-group-flush">
+                <ul key={blog.id} className="list-group list-group-flush">
                   {comments.map((c) => (
                     <li key={c.id} className="list-group-item px-0">
                       <div className="d-flex align-items-start justify-content-between">
@@ -322,7 +325,7 @@ export default function BlogDetails() {
               <div className="d-flex align-items-center gap-3">
                 {blog.author?.photo_url && (
                   <img
-                    src={blog.author.photo_url}
+                    src={profilePhoto}
                     alt={aName}
                     className="rounded-circle border"
                     style={{ width: 48, height: 48, objectFit: "cover" }}
