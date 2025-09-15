@@ -13,6 +13,7 @@ export default function EditProfile() {
     biography: '',
     moto: '',
     photo_url: '',
+    old_photo_url: '',
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +36,8 @@ export default function EditProfile() {
           surname: profile.surname || '',
           biography: profile.biography || '',
           moto: profile.moto || '',
-          photo_url: profile.photo_url || ''
+          photo_url: profile.photo_url || '',
+          old_photo_url: profile.photo_url || '',
         });
         // If profile image exists, you can show it here
         if (profile.photo_url) {
@@ -90,6 +92,8 @@ export default function EditProfile() {
         formDataToSend.append('image', selectedFile);
         const responsePhoto = await AuthService.updatePhoto(selectedFile);
         formDataToSend.append('photo_url', responsePhoto.photoName);
+      }else{
+        formDataToSend.append('photo_url', formData.old_photo_url);
       }
       const response = await AuthService.updateProfile(formDataToSend);
       setSuccess('Profile updated successfully');
@@ -99,25 +103,6 @@ export default function EditProfile() {
       setIsLoading(false);
     }
   };
-
-  // Delete profile
-  // const handleDelete = async () => {
-  //   if (!window.confirm('Are you sure you want to delete your profile? This action cannot be undone.')) return;
-  //   setIsLoading(true);
-  //   setError('');
-  //   setSuccess('');
-  //   try {
-  //     // await AuthService.deleteProfile();
-  //     setSuccess('Profile deleted. Logging out...');
-  //     setTimeout(() => {
-  //       window.location.href = '/login';
-  //     }, 2000);
-  //   } catch (err) {
-  //     setError('Failed to delete profile');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const clearFile = () => {
     setSelectedFile(null);

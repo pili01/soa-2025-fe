@@ -1,5 +1,6 @@
 export type TourDifficulty = "Easy" | "Medium" | "Hard";
 export type TourStatus = "Draft" | "Published" | "Archived";
+export type TourExecutionStatus = "pending" | "in_progress" | "completed" | "failed" | "aborted";
 
 export interface Keypoint {
   id: number;
@@ -10,6 +11,7 @@ export interface Keypoint {
   latitude: number;
   longitude: number;
   ordinal: number;
+  isReached?: boolean;
 }
 
 export interface TourReview {
@@ -35,4 +37,20 @@ export interface Tour {
   price: number;
   keypoints?: Keypoint[];
   reviews?: TourReview[];
+}
+
+export interface FinishedKeypoint {
+  keypoint_id: number;
+  completed_at: string | Date;
+}
+
+export interface TourExecution {
+  id: number;
+  tour_id: number;
+  user_id: number;
+  started_at: string | Date;
+  last_activity: string | Date;
+  status: TourExecutionStatus;
+  ended_at: string | Date;
+  finished_keypoints: FinishedKeypoint[];
 }

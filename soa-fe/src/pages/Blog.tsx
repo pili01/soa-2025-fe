@@ -4,6 +4,7 @@ import { Blog } from "../models/Blog";
 import Message from "../components/Message";
 import { getBlogsForMe, getBlogLikesCount } from "../services/BlogService";
 import "../styles/blog.scss";
+import AuthService from "../services/AuthService";
 
 type BlogWithCounts = Blog & { likes?: number };
 
@@ -42,6 +43,8 @@ export default function BlogList() {
           base.map(async (b) => {
             try {
               const count = await getBlogLikesCount(b.id);
+              const photoUrl = b.author?.photo_url ? await AuthService.getProfilePhoto(b.author.photo_url) : '/default-profile.png';
+              if (b.author) b.author.photo_url = photoUrl;
               return { ...b, likes: count };
             } catch {
               return { ...b, likes: b.likes ?? 0 };

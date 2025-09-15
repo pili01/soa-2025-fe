@@ -72,12 +72,19 @@ export default function Header() {
               <li className="nav-item">
                 <NavLink to="/my-tours" className="nav-link">My tours</NavLink>
               </li>
+              {AuthService.getUserRole() === 'Tourist' && (
+                <li className="nav-item">
+                  <NavLink to="/purchased-tours" className="nav-link">Purchased tours</NavLink>
+                </li>
+              )}
               <li className="nav-item">
                 <NavLink to="/where-are-you" className="nav-link">Where are you</NavLink>
               </li>
-              <li className="nav-item">
-                <NavLink to="/followings" className="nav-link">Followings</NavLink>
-              </li>
+              {(AuthService.getUserRole() === 'Tourist' || AuthService.getUserRole() === 'Guide') && (
+                <li className="nav-item">
+                  <NavLink to="/followings" className="nav-link">Followings</NavLink>
+                </li>
+              )}
               <li className="nav-item">
                 <NavLink to="/shopping-cart" className="nav-link">🛒 Cart</NavLink>
               </li>

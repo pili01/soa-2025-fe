@@ -17,6 +17,14 @@ interface ApiPositionResponse {
   position: Position;
 }
 
+interface TourResponse {
+  tour: any;
+  firstKeypoint?: Keypoint;
+  keypoints?: Keypoint[];
+  reviews: TourReview[];
+  message: string;
+}
+
 export async function getTours(signal?: AbortSignal): Promise<Tour[]> {
     const token = AuthService.getToken();
 
@@ -179,5 +187,15 @@ export async function createTourReview(
     }
   );
 
+  return res.data;
+}
+
+export async function fetchTourInfo(tourId: number, signal?: AbortSignal): Promise<TourResponse> {
+  const token = AuthService.getToken();
+  if (!token) throw new Error("No authentication token");
+  const res = await axios.get<TourResponse>(`http://localhost:8080/api/tours/${tourId}/purchased-keypoints`, {
+    signal,
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return res.data;
 }

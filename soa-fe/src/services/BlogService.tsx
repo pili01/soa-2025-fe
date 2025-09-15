@@ -83,9 +83,9 @@ export async function getBlogsForMe(signal?: AbortSignal): Promise<Blog[]> {
   if (!token) return blogs;
 
   try {
-    const me = await AuthService.getMyProfile();
-    return blogs.map(b =>
-      b.userId === me.id
+    return await Promise.all(blogs.map(async b => {
+      const me = await AuthService.getProfileById(b.userId);
+      return b.userId === me.id
         ? {
             ...b,
             author: {
@@ -96,8 +96,8 @@ export async function getBlogsForMe(signal?: AbortSignal): Promise<Blog[]> {
               photo_url: me.photo_url,
             },
           }
-        : b
-    );
+        : b;
+    }));
   } catch {
     return blogs;
   }
@@ -153,7 +153,7 @@ export async function getBlogById(id: number, signal?: AbortSignal): Promise<Blo
   if (!token) return blog;
 
   try {
-    const me = await AuthService.getMyProfile();
+    const me = await AuthService.getProfileById(blog.userId);
     if (blog.userId === me.id) {
       blog = {
         ...blog,

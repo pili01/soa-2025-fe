@@ -26,6 +26,8 @@ import EditProfile from "./pages/EditProfile";
 import Followings from "./pages/Followings";
 import CreateBlog from "./components/CreateBlog";
 import WhereAreYou from "./pages/WhereAreYou";
+import PurchasedTours from "./pages/PurchasedTours";
+import TourExecutionPage from "./pages/TourExecution";
 
 const router = createBrowserRouter([
   {
@@ -51,6 +53,8 @@ const router = createBrowserRouter([
       { path: "followings", element: <Followings /> },
       { path: "/blogs/create", element: <CreateBlog /> },
       { path: "/where-are-you", element: <WhereAreYou /> },
+      { path: "/purchased-tours", element: <PurchasedTours /> },
+      { path: "tour-execution/:tourId", element: <TourExecutionPage /> },
       //{ path: "*", element: <ErrorPage /> },
     ],
   },

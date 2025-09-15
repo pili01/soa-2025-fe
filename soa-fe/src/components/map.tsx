@@ -9,7 +9,7 @@ import { Position } from "../models/Position";
 import { createNewPosition, getPosition } from "../services/PositionService";
 
 export type TourMapProps = {
-  mode: "view" | "edit";
+  mode: "view" | "edit" | "touristLocation";
   checkPoints: Keypoint[];
   selectedId?: string | number;
   draftLocation?: { latitude: number; longitude: number };
@@ -114,6 +114,10 @@ export default function TourMap({
         return;
       }
 
+      if (mode === "touristLocation") {
+        setPickMode(true);
+      }
+
       if (mode !== "edit") return;
       onAddKeyPoint?.({ latitude: +lat, longitude: +lng });
     },
@@ -180,7 +184,7 @@ export default function TourMap({
                     width: 24,
                     height: 24,
                     borderRadius: '50%',
-                    backgroundColor: '#0d6efd',
+                    backgroundColor: k.isReached ? 'green' : '#dc3545',
                     border: '2px solid white',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                     display: 'flex',
