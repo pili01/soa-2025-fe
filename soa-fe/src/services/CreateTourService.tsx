@@ -199,3 +199,48 @@ export async function fetchTourInfo(tourId: number, signal?: AbortSignal): Promi
   });
   return res.data;
 }
+
+export async function setTourPrice(tourId: number, price: number, signal?: AbortSignal) {
+  const token = AuthService.getToken();
+  if (!token) throw new Error('No authentication token');
+
+  const res = await axios.post<Tour>(
+    `http://localhost:8080/api/tours/${tourId}/set-price`,
+    { price },
+    {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+}
+
+export async function publishTour(tourId: number, signal?: AbortSignal) {
+  const token = AuthService.getToken();
+  if (!token) throw new Error('No authentication token');
+
+  const res = await axios.post<Tour>(
+    `http://localhost:8080/api/tours/${tourId}/publish`,
+    {},
+    {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+}
+
+export async function archiveTour(tourId: number, signal?: AbortSignal) {
+  const token = AuthService.getToken();
+  if (!token) throw new Error('No authentication token');
+
+  const res = await axios.post<Tour>(
+    `http://localhost:8080/api/tours/${tourId}/archive`,
+    {},
+    {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return res.data;
+}
